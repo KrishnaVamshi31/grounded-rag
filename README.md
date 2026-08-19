@@ -1,4 +1,4 @@
-# Grounded — PDF question answering that refuses
+# Grounded — PDF question answering
 
 A document Q&A system built around one property: **when the documents don't
 contain the answer, it says so instead of writing a confident paragraph from
