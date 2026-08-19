@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grounded — PDF question answering with receipts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF7;
+  --ink:#16181D;
+  --ink-soft:#5A5F6B;
+  --rule:#DCD8CF;
+  --indigo:#2F3E6B;
+  --moss:#40634A;
+  --rust:#8C3B2E;
+  --shadow:rgba(22,24,29,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 28px 96px}
+
+/* masthead ------------------------------------------------------------ */
+header{border-bottom:1.5px solid var(--ink);padding-bottom:18px;margin-bottom:34px}
+.title{
+  font-family:"Instrument Serif",Georgia,serif;
+  font-size:clamp(38px,6vw,60px);
+  line-height:.95;letter-spacing:-.015em;margin:0;
+}
+.title em{font-style:italic;color:var(--indigo)}
+.tagline{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-soft);margin-top:12px;
+  display:flex;gap:18px;flex-wrap:wrap;
+}
+.tagline b{font-weight:500;color:var(--ink)}
+
+/* ask ----------------------------------------------------------------- */
+.ask{display:flex;gap:10px;align-items:flex-start;margin-bottom:14px}
+textarea{
+  flex:1;resize:vertical;min-height:64px;padding:14px 16px;
+  border:1.5px solid var(--rule);border-radius:2px;background:#fff;
+  font-family:inherit;font-size:17px;line-height:1.45;color:var(--ink);
+}
+textarea:focus{outline:2px solid var(--indigo);outline-offset:1px;border-color:transparent}
+button{
+  font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.06em;
+  text-transform:uppercase;padding:14px 20px;border:1.5px solid var(--ink);
+  background:var(--ink);color:var(--paper);border-radius:2px;cursor:pointer;
+}
+button:hover{background:var(--indigo);border-color:var(--indigo)}
+button:disabled{opacity:.4;cursor:default}
+button.ghost{background:transparent;color:var(--ink)}
+button.ghost:hover{background:var(--ink);color:var(--paper)}
+.hint{font-size:13px;color:var(--ink-soft);margin-bottom:30px}
+.hint code{font-family:"IBM Plex Mono",monospace;font-size:12px}
+
+/* two column ---------------------------------------------------------- */
+.cols{display:grid;grid-template-columns:1fr 300px;gap:44px;align-items:start}
+@media(max-width:820px){.cols{grid-template-columns:1fr;gap:30px}}
+
+/* answer -------------------------------------------------------------- */
+.verdict{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;display:inline-flex;align-items:center;gap:7px;
+  padding:5px 10px;border-radius:2px;margin-bottom:16px;
+}
+.verdict.grounded{background:rgba(64,99,74,.1);color:var(--moss)}
+.verdict.refused{background:rgba(140,59,46,.09);color:var(--rust)}
+.verdict::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.answer{font-size:19px;line-height:1.62;max-width:62ch}
+.answer p{margin:0 0 14px}
+
+/* citations — the signature: provenance you can open ------------------- */
+.exhibits{margin-top:30px;border-top:1px solid var(--rule);padding-top:18px}
+.exhibits h2{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 12px;font-weight:500;
+}
+details.exhibit{border-bottom:1px solid var(--rule);padding:11px 0}
+details.exhibit summary{
+  cursor:pointer;list-style:none;display:flex;gap:12px;align-items:baseline;
+}
+details.exhibit summary::-webkit-details-marker{display:none}
+.pin{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;
+  background:var(--indigo);color:#fff;padding:2px 7px;border-radius:2px;
+  white-space:nowrap;
+}
+.where{font-size:14px;color:var(--ink-soft)}
+.where b{color:var(--ink);font-weight:500}
+.passage{
+  margin-top:11px;padding:14px 16px;background:#fff;
+  border-left:2px solid var(--indigo);
+  font-size:14.5px;line-height:1.6;color:#2C3038;
+}
+
+/* trace rail ---------------------------------------------------------- */
+.trace{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.5;
+  border-left:1.5px solid var(--rule);padding-left:18px;
+  position:sticky;top:34px;
+}
+.trace h2{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-soft);margin:0 0 14px;font-weight:500;
+}
+.step{display:flex;gap:10px;padding:4px 0;color:var(--ink-soft)}
+.step .t{color:#A4A29B;font-variant-numeric:tabular-nums;flex:none}
+.step.live{color:var(--indigo)}
+.step.live .s::after{content:"…"}
+.step .note{color:var(--ink)}
+.empty{color:#A4A29B}
+
+.error{
+  border:1.5px solid var(--rust);color:var(--rust);padding:12px 15px;
+  border-radius:2px;font-size:14.5px;margin-bottom:20px;background:#fff;
+}
+@media(prefers-reduced-motion:no-preference){
+  .step{animation:in .22s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(-2px)}to{opacity:1}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1 class="title">Grounded<em>.</em></h1>
+  <div class="tagline">
+    <span>Answers from your PDFs — <b>or nothing at all</b></span>
+    <span id="stat">checking index…</span>
+  </div>
+</header>
+
+<div class="ask">
+  <textarea id="q" placeholder="Ask something the documents might answer."></textarea>
+  <button id="go">Ask</button>
+</div>
+<div class="hint">
+  No index yet? <button class="ghost" id="pick" style="padding:6px 12px;font-size:11px">Upload PDFs</button>
+  <input type="file" id="files" accept="application/pdf" multiple hidden>
+  <span id="up"></span>
+</div>
+
+<div class="cols">
+  <main>
+    <div id="err"></div>
+    <div id="verdict"></div>
+    <div class="answer" id="answer"></div>
+    <div class="exhibits" id="exhibits" hidden>
+      <h2>Sources</h2>
+      <div id="exlist"></div>
+    </div>
+  </main>
+
+  <aside class="trace">
+    <h2>What it did</h2>
+    <div id="steps"><div class="empty">Idle.</div></div>
+  </aside>
+</div>
+
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let t0 = 0;
+
+function step(text, note, live){
+  if ($('steps').querySelector('.empty')) $('steps').innerHTML = '';
+  const el = document.createElement('div');
+  el.className = 'step' + (live ? ' live' : '');
+  const secs = ((performance.now() - t0)/1000).toFixed(1);
+  el.innerHTML = `<span class="t">${secs}s</span><span class="s">${text}</span>` +
+                 (note ? ` <span class="note">${note}</span>` : '');
+  $('steps').appendChild(el);
+  return el;
+}
+
+async function health(){
+  try{
+    const h = await (await fetch('/health')).json();
+    $('stat').textContent = h.indexed
+      ? `${h.chunks} chunks · ${h.model}`
+      : 'no index yet';
+  }catch{ $('stat').textContent = 'service unreachable'; }
+}
+health();
+
+$('pick').onclick = () => $('files').click();
+$('files').onchange = async e => {
+  const files = [...e.target.files];
+  if(!files.length) return;
+  $('up').textContent = ` reading ${files.length} file(s)…`;
+  const body = new FormData();
+  files.forEach(f => body.append('files', f));
+  try{
+    const r = await fetch('/ingest', {method:'POST', body});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail || 'Upload failed');
+    $('up').textContent = ` indexed ${d.chunks} chunks from ${d.documents.length} document(s)`;
+    health();
+  }catch(err){ $('up').textContent = ' ' + err.message; }
+};
+
+$('q').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('go').click();
+});
+
+$('go').onclick = async () => {
+  const question = $('q').value.trim();
+  if(!question) return;
+
+  $('go').disabled = true;
+  $('err').innerHTML = '';
+  $('verdict').innerHTML = '';
+  $('answer').innerHTML = '';
+  $('exhibits').hidden = true;
+  $('exlist').innerHTML = '';
+  $('steps').innerHTML = '';
+  t0 = performance.now();
+  let live = null;
+
+  try{
+    const res = await fetch('/ask', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question})
+    });
+    if(!res.ok){
+      const d = await res.json().catch(()=>({}));
+      throw new Error(d.detail || `Request failed (${res.status})`);
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      const blocks = buf.split('\n\n');
+      buf = blocks.pop();
+
+      for(const block of blocks){
+        const name = (block.match(/^event: (.+)$/m) || [])[1];
+        const raw  = (block.match(/^data: (.+)$/m) || [])[1];
+        if(!name || !raw) continue;
+        const d = JSON.parse(raw);
+
+        if(name === 'stage'){
+          if(live) live.classList.remove('live');
+          live = step(d.stage, d.attempt > 1 ? `attempt ${d.attempt}` : '', true);
+        }
+        if(name === 'queries')  step('searched for', d.queries.map(q=>`“${q}”`).join(', '));
+        if(name === 'retrieved') step('found', `${d.count} passages · pages ${d.pages.join(', ')}`);
+        if(name === 'graded')    step('kept', `${d.kept} of ${d.of} as relevant`);
+        if(name === 'done'){
+          if(live) live.classList.remove('live');
+          render(d);
+        }
+      }
+    }
+  }catch(err){
+    $('err').innerHTML = `<div class="error">${err.message}</div>`;
+  }finally{
+    $('go').disabled = false;
+  }
+};
+
+function render(d){
+  const ok = d.status === 'answered';
+  $('verdict').innerHTML =
+    `<div class="verdict ${ok ? 'grounded':'refused'}">${
+      ok ? 'Grounded in ' + d.citations.length + ' passage' + (d.citations.length===1?'':'s')
+         : 'Not in these documents'}</div>`;
+
+  $('answer').innerHTML = d.text.split(/\n{2,}/)
+    .map(p => `<p>${escape_(p)}</p>`).join('');
+
+  if(d.citations.length){
+    $('exhibits').hidden = false;
+    $('exlist').innerHTML = d.citations.map(c => `
+      <details class="exhibit">
+        <summary>
+          <span class="pin">p${c.page}</span>
+          <span class="where"><b>${escape_(c.heading || '—')}</b> · ${escape_(c.source)}</span>
+        </summary>
+        <div class="passage">${escape_(c.text)}</div>
+      </details>`).join('');
+  }
+  if(d.rejected && d.rejected.length){
+    step('rejected', `${d.rejected.length} citation(s) pointing at passages it wasn't given`);
+  }
+}
+
+function escape_(s){
+  return String(s).replace(/[&<>"]/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.env
+.venv/
+index/
+chunks.jsonl
+eval_results.json
+*.pdf
+__pycache__/
+*.pyc

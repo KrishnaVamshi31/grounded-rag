@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      # Keep the index outside the image so a rebuild doesn't wipe it.
+      - ./index:/app/index
+      - ./chunks.jsonl:/app/chunks.jsonl

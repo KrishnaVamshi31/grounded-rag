@@ -1,0 +1,9 @@
+pymupdf==1.28.2
+numpy>=2.0
+sentence-transformers>=3.0
+langgraph>=0.2
+openai>=1.40
+python-dotenv>=1.0
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
