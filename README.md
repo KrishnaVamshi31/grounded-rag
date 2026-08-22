@@ -120,28 +120,118 @@ kept, and whether it retried.
 
 ## Run it
 
+The repo ships a **prebuilt index** (`index_jm7/` — 141 chunks from a 30-page
+chapter), so you can go from clone to a working UI without supplying a PDF or
+running ingestion. Note that `index/`, `chunks.jsonl`, and the source PDFs are
+gitignored and will *not* be in your clone; `index_jm7/` is the one that is.
+
+**You need:** Python 3.12 or newer (tested on 3.12 in the Docker image and
+3.14 locally) and an OpenAI-compatible API key. `.env.example` points at Groq,
+whose free tier is enough to try this.
+
+### 1. Install
+
 ```bash
+git clone https://github.com/KrishnaVamshi31/grounded-rag.git
+cd grounded-rag
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # add your key
-python ingest.py yourdoc.pdf --out chunks.jsonl
-python index.py build --chunks chunks.jsonl
-uvicorn api:app --reload
 ```
 
-Docker:
+On Windows the activate line is `.venv\Scripts\activate` instead.
+
+### 2. Add a key
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and set `LLM_API_KEY`. A [Groq](https://console.groq.com) key
+works with the base URL and model already in the file. `JUDGE_MODEL` only
+matters if you run the end-to-end eval — see step 5.
+
+### 3. Start it
+
+```bash
+INDEX_DIR=index_jm7 uvicorn api:app --reload
+```
+
+PowerShell:
+
+```powershell
+$env:INDEX_DIR = "index_jm7"; uvicorn api:app --reload
+```
+
+Open **http://localhost:8000**. `GET /health` should return
+`{"indexed":true,"chunks":141,"model":"...","dense":true}`.
+
+The first question takes an extra minute: sentence-transformers downloads
+all-MiniLM-L6-v2 (~90MB) on first use and caches it. The Docker image bakes it
+in and skips this.
+
+Questions that work against the shipped index:
+
+- *What is teacher forcing?* — answers, cites page 16
+- *What is the difference between few-shot and zero-shot prompting?*
+- *Why is greedy decoding not used in practice with large language models?*
+- *What was Acme Corp's 2024 revenue?* — retries once, then refuses
+
+That last one is the point of the project. Ask it something the chapter
+doesn't cover and watch the stream retry with different wording, keep zero
+passages, and decline.
+
+### 4. Use your own PDF
+
+Click **Upload PDFs** in the UI, or do it from the command line:
+
+```bash
+python ingest.py yourdoc.pdf --out chunks.jsonl
+python index.py build --chunks chunks.jsonl --out index
+uvicorn api:app --reload            # INDEX_DIR defaults to ./index
+```
+
+Uploading through the UI overwrites `chunks.jsonl` and `index/`; `index_jm7/`
+is left alone, so the quickstart above keeps working.
+
+### 5. Evaluate
+
+Only the Book B index ships with the repo, so these two run against a fresh
+clone as-is:
+
+```bash
+python eval_retrieval.py --index index_jm7 --eval evalset_jm7.jsonl
+python inspect_retrieval.py --index index_jm7 --eval evalset_jm7.jsonl --method hybrid
+```
+
+The Book A numbers need that book ingested into `index/` first (step 4), after
+which the defaults apply:
+
+```bash
+python eval_retrieval.py --eval evalset.jsonl        # recall@k per method
+python eval_e2e.py --eval evalset.jsonl --judge      # decision, citation, groundedness
+```
+
+`--judge` needs `JUDGE_MODEL` set to a *different* model family than
+`LLM_MODEL`, or the groundedness score is self-flattering — see the note under
+"Measured results".
+
+### Docker
 
 ```bash
 docker compose up --build
 ```
 
-Evaluate:
+The compose file bind-mounts `./index` and `./chunks.jsonl`, so build an index
+locally (step 4) before using it — otherwise Docker creates an empty directory
+where `chunks.jsonl` should be and the container starts with nothing indexed.
 
-```bash
-python eval_retrieval.py --eval evalset.jsonl              # recall@k per method
-python eval_retrieval.py --index index_jm7 --eval evalset_jm7.jsonl
-python eval_e2e.py --judge               # decision, citation, groundedness
-python inspect_retrieval.py --method hybrid   # per-question diagnosis
-```
+### If it stops mid-answer
+
+Groq's free tier allows 8,000 tokens per minute. One question is comfortably
+inside that; several in quick succession is not, and a 429 currently ends the
+event stream without a `done` event, so the UI just stops. Wait a minute and
+ask again, or move to a paid tier.
 
 ---
 
